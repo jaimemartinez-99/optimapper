@@ -135,7 +135,7 @@ const submit = async () => {
               <div v-if="selectedCityRecord" class="mb-6 d-flex align-center country-stamp pa-3">
                 <div class="text-h3 mr-4 stamp-flag">{{ selectedCityRecord.countryData.flag }}</div>
                 <div>
-                  <div class="text-caption text-moss font-weight-bold tracking-widest text-uppercase">SELLO LOCALIZADO</div>
+                  <div class="text-caption text-moss font-weight-bold tracking-widest text-uppercase">PAÍS LOCALIZADO</div>
                   <div class="text-h6 font-weight-bold text-ink serif-text">{{ selectedCityRecord.countryData.name }}</div>
                 </div>
                 <v-spacer></v-spacer>

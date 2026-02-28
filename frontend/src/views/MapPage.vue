@@ -11,6 +11,7 @@ const loading = ref(true)
 const errorMsg = ref('')
 const itineraryData = ref(null)
 const selectedDay = ref(0) // Índice del tab (0, 1, 2...)
+const mobileView = ref('diary') // 'diary' o 'map'
 
 const mapContainer = ref(null)
 let mapInstance = null
@@ -115,24 +116,34 @@ watch(selectedDay, (newVal) => {
   }
 })
 
+watch(mobileView, (newView) => {
+  if (newView === 'map' && mapInstance) {
+    nextTick(() => {
+      setTimeout(() => {
+        mapInstance.invalidateSize()
+      }, 300)
+    })
+  }
+})
+
 onMounted(() => {
   fetchItinerary()
 })
 </script>
 
 <template>
-  <v-container fluid class="fill-height pa-0 vintage-bg" style="position: relative;">
+  <v-container fluid class="map-page-root pa-0 vintage-bg" style="position: relative;">
     <div class="paper-texture"></div>
 
     <!-- Skeleton loader / Error handling -->
-    <div v-if="loading" class="d-flex fill-height justify-center align-center w-100 position-relative overflow-hidden" style="z-index: 2;">
+    <div v-if="loading" class="d-flex flex-grow-1 justify-center align-center w-100 position-relative overflow-hidden" style="z-index: 2; height: 100%;">
       <div class="text-center">
         <v-icon icon="mdi-compass-outline" class="mb-6 spin-slow" size="80" color="var(--color-accent-leather)"></v-icon>
         <h3 class="text-display text-h5 text-ink tracking-widest serif-text cartography-title">DESENROLLANDO PERGAMINOS...</h3>
       </div>
     </div>
     
-    <div v-else-if="errorMsg" class="d-flex fill-height justify-center align-center w-100" style="z-index: 2;">
+    <div v-else-if="errorMsg" class="d-flex flex-grow-1 justify-center align-center w-100" style="z-index: 2; height: 100%;">
       <v-card class="pa-8 text-center paper-card border-error" max-width="500">
         <v-icon icon="mdi-alert-octagon-outline" color="#C05727" size="64" class="mb-4"></v-icon>
         <h3 class="text-display text-h5 text-rust mb-2 tracking-widest serif-text">Ruta Extraviada</h3>
@@ -142,10 +153,14 @@ onMounted(() => {
     </div>
 
     <!-- Main View -->
-    <v-row no-gutters class="fill-height map-page-layout" v-else style="z-index: 2;">
+    <v-row no-gutters class="flex-grow-1 map-page-layout" v-else style="z-index: 2; height: 100%;">
       
       <!-- Diario de Viaje (Sidebar) -->
-      <v-col cols="12" md="4" class="d-flex flex-column h-100 paper-sidebar sidebar-col order-2 order-md-1 position-relative">
+      <v-col 
+        cols="12" md="4" 
+        class="d-flex flex-column paper-sidebar sidebar-col order-2 order-md-1 position-relative"
+        :class="mobileView === 'diary' ? 'h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
+      >
         
         <!-- Header -->
         <div class="pa-6 border-b-vintage position-relative">
@@ -198,16 +213,43 @@ onMounted(() => {
       </v-col>
 
       <!-- Mapa -->
-      <v-col cols="12" md="8" class="h-100 d-flex flex-column position-relative pa-0 map-col order-1 order-md-2">
+      <v-col 
+        cols="12" md="8" 
+        class="d-flex flex-column position-relative pa-0 map-col order-1 order-md-2"
+        :class="mobileView === 'map' ? 'h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
+      >
         <div ref="mapContainer" class="w-100 flex-grow-1 map-container vintage-map-filter"></div>
         <!-- Torn Edges Effect overlay -->
         <div class="map-overlay-edges"></div>
       </v-col>
     </v-row>
+
+    <!-- Botón flotante para móvil -->
+    <v-btn
+      v-if="!loading && !errorMsg"
+      elevation="8"
+      icon
+      size="x-large"
+      class="d-md-none mobile-fab"
+      color="var(--color-accent-leather)"
+      @click="mobileView = mobileView === 'diary' ? 'map' : 'diary'"
+    >
+      <v-icon :icon="mobileView === 'diary' ? 'mdi-map-legend' : 'mdi-book-open-page-variant-outline'" color="#F5EEDA"></v-icon>
+    </v-btn>
   </v-container>
 </template>
 
 <style scoped>
+.map-page-root {
+  height: 100vh;
+  height: 100dvh; /* For mobile safari */
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: column;
+}
+
 .vintage-bg {
   background-color: var(--color-bg-paper) !important;
 }
@@ -295,8 +337,8 @@ onMounted(() => {
 
 /* Map Col */
 .map-col {
-  height: 50vh !important;
-  min-height: 50vh;
+  height: 100% !important;
+  min-height: 100%;
   background-color: #E6D5B8; /* Fallback map background */
 }
 
@@ -314,6 +356,14 @@ onMounted(() => {
     height: 100vh !important;
     min-height: 100vh;
   }
+}
+
+.mobile-fab {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  border: 2px solid #5A2B0E;
 }
 
 /* Leaflet Popup overrides for Vintage theme */

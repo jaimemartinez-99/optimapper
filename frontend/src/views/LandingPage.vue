@@ -1,5 +1,7 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 const router = useRouter()
 
@@ -7,11 +9,34 @@ const startPlanning = () => {
   router.push('/plan')
 }
 
-const suggestedRoutes = [
-  { city: 'Florencia, Italia', days: 5, img: 'https://images.unsplash.com/photo-1542385151-efd9000785a0?q=80&w=800&height=600', span: 2 },
-  { city: 'Kyoto, Japón', days: 3, img: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=400&height=300', span: 1 },
-  { city: 'Marrakech, Marruecos', days: 4, img: 'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?q=80&w=400&height=300', span: 1 }
+const suggestedRoutes = ref([])
+
+const vintageImages = [
+  'https://images.unsplash.com/photo-1542385151-efd9000785a0?q=80&w=800&height=600',
+  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=400&height=300',
+  'https://images.unsplash.com/photo-1539020140153-e479b8c22e70?q=80&w=400&height=300'
 ]
+
+const loadRandomExpeditions = async () => {
+  try {
+    const response = await axios.get('http://localhost:8000/itineraries/random')
+    if (response.data && response.data.length > 0) {
+      suggestedRoutes.value = response.data.map((route, index) => ({
+        id: route.id,
+        city: route.city,
+        days: route.days,
+        img: vintageImages[index % vintageImages.length],
+        span: index === 0 ? 2 : 1
+      }))
+    }
+  } catch (error) {
+    console.error('Error loading expeditions:', error)
+  }
+}
+
+onMounted(() => {
+  loadRandomExpeditions()
+})
 </script>
 
 <template>
@@ -68,13 +93,13 @@ const suggestedRoutes = [
           <div class="divider-ornate mx-auto"></div>
         </div>
         
-        <div class="polaroid-grid">
+        <div class="polaroid-grid" v-if="suggestedRoutes.length > 0">
           <div 
             v-for="(route, i) in suggestedRoutes" 
             :key="i"
             class="polaroid-item cursor-pointer"
             :class="route.span === 2 ? 'span-2' : 'span-1'"
-            @click="startPlanning"
+            @click="router.push(`/map/${route.id}`)"
           >
             <div class="polaroid-frame">
               <v-img :src="route.img" cover class="polaroid-img"></v-img>

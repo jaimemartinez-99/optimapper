@@ -87,6 +87,7 @@ def create_itinerary(request: ItineraryRequest):
                 "uuid": itinerary_id,
                 "city": city_name,
                 "country": country_name,
+                "number_of_days": request.days,
                 "itinerary": itinerary
             }
             supabase.schema("optimapper").table("itineraries").insert(data).execute()
@@ -132,3 +133,33 @@ def get_itinerary(itinerary_id: str):
         if itinerary_id not in itineraries_store:
             raise HTTPException(status_code=404, detail="Itinerario no encontrado")
         return itineraries_store[itinerary_id]
+
+@app.get("/itineraries/random")
+def get_random_itineraries():
+    """Recupera 3 itinerarios aleatorios de la base de datos."""
+    import random
+    if supabase:
+        try:
+            # Obtener los últimos 50 itinerarios para elegir aleatoriamente y no saturar la BD
+            result = supabase.schema("optimapper").table("itineraries").select("uuid, city, country, number_of_days").order("created_at", desc=True).limit(50).execute()
+            if result.data and len(result.data) > 0:
+                pool = result.data
+                # Si hay menos de 3, devolver todos
+                sample_size = min(3, len(pool))
+                random_selection = random.sample(pool, sample_size)
+                
+                # Mapear la salida
+                return [
+                    {
+                        "id": row.get("uuid"),
+                        "city": f"{row.get('city')}, {row.get('country')}" if row.get("country") else row.get("city"),
+                        "days": row.get("number_of_days") or 3 # Fallback por si hay filas antiguas
+                    }
+                    for row in random_selection
+                ]
+            else:
+                return []
+        except Exception as e:
+            print(f"Error fetching random itineraries: {e}")
+            return []
+    return []
