@@ -215,7 +215,9 @@ onMounted(() => {
 .paper-texture {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-image: url('data:image/svg+xml,%3Csvg width="200" height="200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="200" height="200" fill="transparent"/%3E%3Crect width="200" height="200" filter="url(%23noise)" opacity="0.08"/%3E%3C/svg%3E');
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/H9bDAAAACHRSTlMAAAAAAAB/f39+YwD5AAAAgElEQVQ4y2NgQAX8DIwgQkxMDGzMDHwMDEwMLAwMTIwMjEwMjEwMTIwMjEAuxMTMwMDMwAAWZWFgZ2AAcxkYWJgZmBkYGBmYGBgZmBkYmJkYGFjYGRoYmBiaGJgZmRgYmZkY2BgYmJkYGBmZGBiYmRkAAkwMDEyMTBxgwMTEwMDAAABkKBgE2oJ1LAAAAABJRU5ErkJggg==");
+  background-repeat: repeat;
+  opacity: 0.15;
   z-index: 1;
   pointer-events: none;
 }

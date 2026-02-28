@@ -112,7 +112,9 @@ const suggestedRoutes = [
 .paper-texture {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-image: url('data:image/svg+xml,%3Csvg width="200" height="200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="200" height="200" fill="transparent"/%3E%3Crect width="200" height="200" filter="url(%23noise)" opacity="0.08"/%3E%3C/svg%3E');
+  background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/H9bDAAAACHRSTlMAAAAAAAB/f39+YwD5AAAAgElEQVQ4y2NgQAX8DIwgQkxMDGzMDHwMDEwMLAwMTIwMjEwMjEwMTIwMjEAuxMTMwMDMwAAWZWFgZ2AAcxkYWJgZmBkYGBmYGBgZmBkYmJkYGFjYGRoYmBiaGJgZmRgYmZkY2BgYmJkYGBmZGBiYmRkAAkwMDEyMTBxgwMTEwMDAAABkKBgE2oJ1LAAAAABJRU5ErkJggg==");
+  background-repeat: repeat;
+  opacity: 0.15;
   z-index: 1;
   pointer-events: none;
 }
@@ -137,9 +139,7 @@ const suggestedRoutes = [
 
 /* Vintage Card/Container */
 .expedition-card {
-  background-color: rgba(245, 238, 218, 0.85); /* Slightly transparent paper */
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background-color: rgba(245, 238, 218, 0.95); /* More opaque, no blur */
   border-radius: 2% 4% 3% 5% / 5% 3% 4% 2%;
   border: 1px solid rgba(139, 90, 43, 0.3);
   box-shadow: 0 10px 30px rgba(44, 62, 80, 0.1), inset 0 0 20px rgba(139, 90, 43, 0.05);
