@@ -76,7 +76,7 @@ const submit = async () => {
       ? `${city.value}, ${selectedCityRecord.value.countryData.name}`
       : city.value
 
-    const response = await axios.post('http://localhost:8000/itinerary', {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/itinerary`, {
       city: payloadCity,
       days: days.value
     })

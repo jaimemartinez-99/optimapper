@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+# El cliente se inicializa dentro de get_pois para evitar errores al arrancar el servidor si falta la API KEY
+# client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 SYSTEM_PROMPT = (
     "Eres un experto en viajes y turismo. "
@@ -29,8 +30,14 @@ def get_pois(city: str, num_days: int) -> list[str]:
         f"Responde SOLO con el JSON (array de strings), sin ningún texto adicional."
     )
 
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise ValueError("No se ha configurado la variable de entorno ANTHROPIC_API_KEY.")
+
+    client = anthropic.Anthropic(api_key=api_key)
+
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-3-7-sonnet-20250219",  # USANDO EL ÚLTIMO MODELO DISPONIBLE
         max_tokens=2048,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],

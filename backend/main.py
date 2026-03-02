@@ -13,15 +13,31 @@ from services.optimizer_service import build_itinerary
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+load_dotenv()
 
-print(f"DEBUG LOAD_DOTENV: URL={SUPABASE_URL is not None}, KEY={SUPABASE_KEY is not None}")
+# Obtenemos las variables con un string vacío por defecto para que len() no falle
+raw_url = os.getenv("SUPABASE_URL", "")
+raw_key = os.getenv("SUPABASE_KEY", "")
+
+# OPCIONAL: Limpieza por si acaso hay espacios invisibles
+SUPABASE_URL = raw_url.strip()
+SUPABASE_KEY = raw_key.strip()
+
+# Log de diagnóstico
+if SUPABASE_KEY:
+    print(f"DEBUG: Longitud de clave detectada: {len(SUPABASE_KEY)}")
+    print(f"DEBUG: Comienza por: {SUPABASE_KEY[:10]}... Termina por: ...{SUPABASE_KEY[-5:]}")
+else:
+    print("DEBUG: SUPABASE_KEY está VACÍA o es None")
 
 supabase: Client | None = None
+
 if SUPABASE_URL and SUPABASE_KEY:
-    print("DEBUG: Initializing Supabase client")
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Cliente de Supabase creado con éxito")
+    except Exception as e:
+        print(f"❌ Error al inicializar Supabase: {e}")
 
 
 app = FastAPI(
@@ -33,7 +49,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -163,3 +179,10 @@ def get_random_itineraries():
             print(f"Error fetching random itineraries: {e}")
             return []
     return []
+
+if __name__ == "__main__":
+    import uvicorn
+    # Cloud Run inyecta la variable de entorno PORT
+    port = int(os.environ.get("PORT", 8080))
+    # Importante: host="0.0.0.0" para que sea visible externamente
+    uvicorn.run(app, host="0.0.0.0", port=port)

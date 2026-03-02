@@ -19,7 +19,7 @@ const vintageImages = [
 
 const loadRandomExpeditions = async () => {
   try {
-    const response = await axios.get('http://localhost:8000/itineraries/random')
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/itineraries/random`)
     if (response.data && response.data.length > 0) {
       suggestedRoutes.value = response.data.map((route, index) => ({
         id: route.id,

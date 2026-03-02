@@ -23,7 +23,7 @@ const ROUTE_COLORS = ['#8B5A2B', '#4A5D43', '#C05727', '#2C3E50', '#8c2425', '#5
 
 const fetchItinerary = async () => {
   try {
-    const response = await axios.get(`http://localhost:8000/itinerary/${route.params.id}`)
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/itinerary/${route.params.id}`)
     itineraryData.value = response.data
     
     loading.value = false // Liberar el DOM render
