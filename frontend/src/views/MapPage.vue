@@ -158,8 +158,8 @@ onMounted(() => {
       <!-- Diario de Viaje (Sidebar) -->
       <v-col 
         cols="12" md="4" 
-        class="d-flex flex-column paper-sidebar sidebar-col order-2 order-md-1 position-relative"
-        :class="mobileView === 'diary' ? 'h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
+        class="flex-column paper-sidebar sidebar-col order-2 order-md-1 position-relative"
+        :class="mobileView === 'diary' ? 'd-flex h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
       >
         
         <!-- Header -->
@@ -168,7 +168,7 @@ onMounted(() => {
             <div>
               <div class="text-caption text-moss tracking-widest font-weight-bold mb-1 text-uppercase">DIARIO DE EXPEDICIÓN</div>
               <h2 class="text-display text-h4 font-weight-bold text-ink text-uppercase cartography-title">{{ itineraryData.city.split(',')[0] }}</h2>
-              <span class="text-body-2 text-ink-light tracking-wide font-italic">Estimación: {{ itineraryData.days }} Jornadas</span>
+              <span class="text-body-2 text-ink-light tracking-wide font-italic">Haz el recorrido en el orden que te apetezca</span>
             </div>
             <v-btn icon="mdi-book-arrow-left-outline" variant="text" color="var(--color-accent-leather)" @click="router.push('/')" title="Cerrar Diario"></v-btn>
           </div>
@@ -212,11 +212,10 @@ onMounted(() => {
         </v-list>
       </v-col>
 
-      <!-- Mapa -->
       <v-col 
         cols="12" md="8" 
-        class="d-flex flex-column position-relative pa-0 map-col order-1 order-md-2"
-        :class="mobileView === 'map' ? 'h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
+        class="flex-column position-relative pa-0 map-col order-1 order-md-2"
+        :class="mobileView === 'map' ? 'd-flex h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
       >
         <div ref="mapContainer" class="w-100 flex-grow-1 map-container vintage-map-filter"></div>
         <!-- Torn Edges Effect overlay -->
