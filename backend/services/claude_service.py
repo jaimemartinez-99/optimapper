@@ -37,8 +37,8 @@ def get_pois(city: str, num_days: int) -> list[str]:
     client = anthropic.Anthropic(api_key=api_key)
 
     response = client.messages.create(
-        model="claude-3-7-sonnet-20250219",  # USANDO EL ÚLTIMO MODELO DISPONIBLE
-        max_tokens=2048,
+        model="claude-sonnet-4-20250514",  # USANDO EL ÚLTIMO MODELO DISPONIBLE
+        max_tokens=1000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
     )
