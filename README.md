@@ -2,6 +2,8 @@
 
 OptiMapper is a full-stack travel itinerary planner. A user chooses a city and a trip length, the backend asks Claude for points of interest, geocodes them with OpenStreetMap's Nominatim service, groups nearby places into days with K-Means, and orders each day's stops with a nearest-neighbor route heuristic. The resulting itinerary is displayed on an interactive Leaflet map.
 
+Deployed in: https://optimapper.vercel.app/ Might not work
+
 ## Features
 
 - AI-generated points of interest for trips from 1 to 14 days
