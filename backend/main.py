@@ -13,8 +13,6 @@ from services.optimizer_service import build_itinerary
 
 load_dotenv()
 
-load_dotenv()
-
 # Obtenemos las variables con un string vacío por defecto para que len() no falle
 raw_url = os.getenv("SUPABASE_URL", "")
 raw_key = os.getenv("SUPABASE_KEY", "")
@@ -23,21 +21,14 @@ raw_key = os.getenv("SUPABASE_KEY", "")
 SUPABASE_URL = raw_url.strip()
 SUPABASE_KEY = raw_key.strip()
 
-# Log de diagnóstico
-if SUPABASE_KEY:
-    print(f"DEBUG: Longitud de clave detectada: {len(SUPABASE_KEY)}")
-    print(f"DEBUG: Comienza por: {SUPABASE_KEY[:10]}... Termina por: ...{SUPABASE_KEY[-5:]}")
-else:
-    print("DEBUG: SUPABASE_KEY está VACÍA o es None")
-
 supabase: Client | None = None
 
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Cliente de Supabase creado con éxito")
-    except Exception as e:
-        print(f"❌ Error al inicializar Supabase: {e}")
+        print("Supabase client initialized")
+    except Exception:
+        print("Supabase client initialization failed")
 
 
 app = FastAPI(
