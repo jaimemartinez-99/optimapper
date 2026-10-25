@@ -57,6 +57,15 @@ Una cuota diaria se restablece cada día y puede impedir reabrir o recalcular un
 viaje hasta el siguiente día si se consume por completo. Los viajes largos pueden
 superar las 30 consultas de detalle permitidas al reabrirlos.
 
+Routes consulta únicamente los tramos dirigidos de la propuesta inicial, con
+`GOOGLE_ROUTES_MAX_ELEMENTS=20` por generación, reapertura o recálculo. No completa
+el presupuesto con rutas alternativas. Los demás traslados siguen estimándose
+por distancia y aparecen marcados como tales. Por ejemplo, cuatro y cinco visitas
+repartidas en dos días, sin alojamiento, requieren siete elementos de matriz.
+Las pruebas iniciales consumieron 100 + 100 + 72 = 272 elementos al incluir
+alternativas; la prueba de regresión comprueba que esos siete tramos consumen
+exactamente siete elementos aunque se configure un presupuesto de 100.
+
 También se creó un presupuesto con corte para **Cloud Run**, limitado al proyecto:
 
 - Importe: **1 EUR de consumo bruto estimado por mes**.

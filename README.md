@@ -31,7 +31,7 @@ Deployed in: https://optimapper.vercel.app/
 1. The frontend sends the destination, dates, time budget and preferences to `POST /itinerary`.
 2. Google independently discovers popular attractions; Claude optionally supplies editorial suggestions and estimated visit durations. No Google provider content is sent to Claude.
 3. Candidates are resolved to actual places and deduplicated. Unresolved required places are reported.
-4. A preliminary schedule identifies useful travel pairs. Routes calls are capped at 100 elements by default, rather than querying an unbounded N² matrix.
+4. A preliminary schedule identifies the planned travel legs. Only those directed legs are queried in Routes, capped at 20 elements per operation by default. Other transfers remain explicit estimates.
 5. The planner schedules visits within available time and known opening hours, accounting for breaks, waits, buffer and accommodation return. Unsuitable visits remain optional alternatives.
 6. The API saves a versioned plan in Supabase or memory. Google content is fetched live by place ID when a saved plan is reopened; raw Places data is not persisted.
 7. The diary shows times, daily totals, uncertainties and editable preferences. Replanning saves a new plan and preserves the original.
@@ -129,7 +129,7 @@ The Vite development server prints the local frontend URL when it starts.
 | `ENABLE_AI_SUGGESTIONS` | No | Set `false` for Google-only discovery with no Anthropic requests. Defaults to `true`. |
 | `ALLOWED_ORIGINS` | No | Comma-separated frontend origins allowed by CORS; defaults to local Vite origins. |
 | `GOOGLE_MAPS_API_KEY` | No | Private server key for Places API (New) and Routes API. Enables Google discovery. |
-| `GOOGLE_ROUTES_MAX_ELEMENTS` | No | Maximum billed matrix elements per operation; default `100`, `0` skips Routes. |
+| `GOOGLE_ROUTES_MAX_ELEMENTS` | No | Maximum billed planned route legs per operation; default `20`, `0` skips Routes. |
 | `SUPABASE_URL` | No | Supabase project URL used for persistence. |
 | `SUPABASE_KEY` | No | Supabase key used only by the backend. |
 | `PORT` | No | Runtime port; defaults to `8080` when `main.py` is run directly. |

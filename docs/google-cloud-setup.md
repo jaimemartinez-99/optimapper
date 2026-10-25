@@ -56,10 +56,10 @@ En `backend/.env`, conserva tus variables actuales y añade:
 
 ```dotenv
 GOOGLE_MAPS_API_KEY=tu_clave_privada_de_backend
-GOOGLE_ROUTES_MAX_ELEMENTS=100
+GOOGLE_ROUTES_MAX_ELEMENTS=20
 ```
 
-Con `100` se consultan como máximo 100 pares origen/destino por generación,
+Con `20` se consultan como máximo 20 pares origen/destino por operación,
 recuperación o recálculo. Se priorizan los trayectos del plan preliminar y después
 algunas alternativas cercanas. Los trayectos sin datos reales se marcan como estimados.
 Con `0` se omite Routes; puedes activar solo Places y Maps para empezar.
@@ -89,7 +89,7 @@ Google, el descubrimiento funciona con Places y duraciones orientativas por cate
 4. Cuando vayas a desplegar la rama: **Cloud Run → tu servicio → Editar y desplegar
    nueva revisión → Variables y secretos → Referenciar un secreto**. Expón una
    versión concreta como variable `GOOGLE_MAPS_API_KEY`.
-5. Añade `GOOGLE_ROUTES_MAX_ELEMENTS=100` como variable normal.
+5. Añade `GOOGLE_ROUTES_MAX_ELEMENTS=20` como variable normal.
 6. Configura el tiempo máximo de solicitud de Cloud Run en al menos 300 segundos.
    La imagen ya usa ese tiempo de espera para Gunicorn.
 7. Conserva las referencias existentes de Anthropic y Supabase. No sustituyas el
@@ -131,7 +131,7 @@ coincidencias ya encontradas evitan esas búsquedas adicionales. Puede haber has
 diez búsquedas extra de imprescindibles y una de alojamiento.
 
 Ejemplo calculado: 100 generaciones al mes, tres búsquedas Nearby por generación,
-entre cero y doce búsquedas Text Search adicionales, hasta 100 elementos de Routes
+entre cero y doce búsquedas Text Search adicionales, hasta 20 elementos de Routes
 y una carga de mapa por viaje, **sin reabrir ni recalcular** y sin otro consumo en
 la cuenta: aproximadamente **0–7 USD/mes** en Maps. Los 7 USD corresponden a las
 200 búsquedas Text Search que excederían su cupo en el caso de 1.200 búsquedas.

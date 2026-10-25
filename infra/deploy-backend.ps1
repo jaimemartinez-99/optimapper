@@ -26,7 +26,7 @@ $deployArgs = @(
     '--cpu=1', '--memory=512Mi', '--concurrency=2', '--timeout=300',
     '--cpu-throttling', '--cpu-boost',
     '--min=0', '--max=1', '--min-instances=0', '--max-instances=1',
-    "--update-env-vars=ALLOWED_ORIGINS=$FrontendOrigin,GOOGLE_ROUTES_MAX_ELEMENTS=100,ENABLE_AI_SUGGESTIONS=false",
+    "--update-env-vars=ALLOWED_ORIGINS=$FrontendOrigin,GOOGLE_ROUTES_MAX_ELEMENTS=20,ENABLE_AI_SUGGESTIONS=false",
     '--update-secrets=GOOGLE_MAPS_API_KEY=optimapper-google-maps-key:1',
     "--update-labels=commit-sha=$commit,source-branch=feat-time-aware-itineraries",
     '--quiet'

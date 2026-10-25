@@ -36,16 +36,16 @@ def build_travel_times(points: list[dict], mode="WALK", pace="balanced", use_goo
     if not use_google or not api_key or len(points) < 2:
         return result
     try:
-        budget = max(0, min(2500, int(os.getenv("GOOGLE_ROUTES_MAX_ELEMENTS", "100"))))
+        budget = max(0, min(2500, int(os.getenv("GOOGLE_ROUTES_MAX_ELEMENTS", "20"))))
     except ValueError:
-        budget = 100
+        budget = 20
     count = len(points)
     if not budget:
         result.warnings.append("No se consultó Routes por el límite de coste configurado; los traslados son estimados.")
         return result
 
-    # Query the draft itinerary first, then nearby alternatives. A full N² matrix
-    # is unnecessary when a traveler will use only a small subset of its edges.
+    # The quota counts origin/destination elements, not HTTP requests. Query only
+    # the proposed route's directed legs; keep alternatives as explicit estimates.
     targets = {i: [] for i in range(count)}
     selected = set()
 
@@ -57,12 +57,8 @@ def build_travel_times(points: list[dict], mode="WALK", pace="balanced", use_goo
 
     for origin, destination in preferred_pairs or []:
         select(origin, destination)
-    neighbors = {i: sorted((j for j in range(count) if j != i), key=lambda j: result.minutes[i][j]) for i in range(count)}
-    for rank in range(count - 1):
-        for origin in range(count):
-            select(origin, neighbors[origin][rank])
-        if len(selected) >= budget:
-            break
+    if not selected:
+        return result
 
     def waypoint(index):
         lat, lng = points[index]["coords"]

@@ -76,6 +76,50 @@ class PlacesTests(unittest.TestCase):
 
 
 class RoutesTests(unittest.TestCase):
+    @patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test", "GOOGLE_ROUTES_MAX_ELEMENTS": "100"})
+    def test_two_day_route_queries_seven_legs_without_filling_the_budget(self):
+        points = [{"coords": [40.4 + i * .001, -3.7]} for i in range(16)]
+        route = [(0, 1), (1, 2), (2, 3), (4, 5), (5, 6), (6, 7), (7, 8)]
+        calls = []
+
+        def post(url, json, headers):
+            calls.append(json)
+            return httpx.Response(200, request=httpx.Request("POST", url), json=[
+                {"destinationIndex": index, "condition": "ROUTE_EXISTS", "duration": "600s"}
+                for index in range(len(json["destinations"]))
+            ])
+
+        with patch("services.travel_service.httpx.Client.post", side_effect=post):
+            result = build_travel_times(points, use_google=True, preferred_pairs=route + [route[0], (0, 0)])
+        self.assertEqual(sum(len(call["origins"]) * len(call["destinations"]) for call in calls), 7)
+        self.assertEqual(result.measured, set(route))
+        self.assertTrue(result.leg(3, 4)[1])
+
+    @patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test"})
+    def test_no_planned_legs_never_calls_google(self):
+        points = [{"coords": [40.4, -3.7]}, {"coords": [40.41, -3.7]}]
+        with patch("services.travel_service.httpx.Client") as client:
+            for pairs in (None, [], [(0, 0), (-1, 0), (0, 2)]):
+                result = build_travel_times(points, use_google=True, preferred_pairs=pairs)
+                self.assertFalse(result.measured)
+        client.assert_not_called()
+
+    @patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test"})
+    def test_default_and_invalid_budget_cap_routes_at_twenty_elements(self):
+        points = [{"coords": [40.4 + i * .001, -3.7]} for i in range(8)]
+        route = [(i, j) for i in range(8) for j in range(8) if i != j]
+        for value in (None, "invalid"):
+            with self.subTest(budget=value):
+                with patch.dict(os.environ):
+                    if value is None:
+                        os.environ.pop("GOOGLE_ROUTES_MAX_ELEMENTS", None)
+                    else:
+                        os.environ["GOOGLE_ROUTES_MAX_ELEMENTS"] = value
+                    with patch("services.travel_service.httpx.Client.post", return_value=httpx.Response(200, request=httpx.Request("POST", "https://routes.googleapis.com"), json=[])) as post:
+                        build_travel_times(points, use_google=True, preferred_pairs=route)
+                    elements = sum(len(call.kwargs["json"]["origins"]) * len(call.kwargs["json"]["destinations"]) for call in post.call_args_list)
+                    self.assertEqual(elements, 20)
+
     @patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test", "GOOGLE_ROUTES_MAX_ELEMENTS": "1"})
     def test_selected_itinerary_edges_take_priority_with_tiny_budget(self):
         points = [{"coords": [40.4 + i * .001, -3.7]} for i in range(4)]
@@ -98,7 +142,7 @@ class RoutesTests(unittest.TestCase):
                 {"destinationIndex": 2, "status": {"code": 13}},
             ])
         with patch("services.travel_service.httpx.Client.post", side_effect=post):
-            result = build_travel_times(points, use_google=True)
+            result = build_travel_times(points, use_google=True, preferred_pairs=[(i, j) for i in range(4) for j in range(4) if i != j])
         self.assertLessEqual(sum(len(call["origins"]) * len(call["destinations"]) for call in calls), 12)
         self.assertTrue(any(value == math.inf for row in result.minutes for value in row))
         self.assertTrue(any(value == 3 for row in result.minutes for value in row))
@@ -116,8 +160,9 @@ class RoutesTests(unittest.TestCase):
     @patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test"})
     def test_outage_falls_back_with_explicit_estimates(self):
         points = [{"coords": [40.4, -3.7]}, {"coords": [40.41, -3.7]}]
-        with patch("services.travel_service.httpx.Client.post", side_effect=httpx.ConnectError("offline")):
-            result = build_travel_times(points, use_google=True)
+        with patch("services.travel_service.httpx.Client.post", side_effect=httpx.ConnectError("offline")) as post:
+            result = build_travel_times(points, use_google=True, preferred_pairs=[(0, 1)])
+        post.assert_called_once()
         self.assertFalse(result.measured)
         self.assertTrue(result.leg(0, 1)[1])
         self.assertGreater(result.leg(0, 1)[0], 0)
