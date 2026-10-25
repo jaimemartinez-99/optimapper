@@ -6,7 +6,7 @@ from unittest.mock import patch
 import httpx
 
 from models.schemas import ItineraryRequest, ItineraryResponse
-from services.places_service import PlacesClient, parse_place
+from services.places_service import PlacesClient, PlacesQuotaError, parse_place
 from services.storage_service import hydrate_plan, serialize_plan
 from services.travel_service import build_travel_times
 
@@ -18,6 +18,12 @@ def raw_place(identifier="prado", name="Museo del Prado", lat=40.4):
 
 
 class PlacesTests(unittest.TestCase):
+    def test_provider_quota_error_is_preserved(self):
+        response = httpx.Response(429, request=httpx.Request("POST", "https://places.googleapis.com"))
+        with patch("services.places_service.httpx.request", return_value=response):
+            with self.assertRaises(PlacesQuotaError):
+                PlacesClient().search("Madrid")
+
     def test_parsing_excludes_closed_places(self):
         value = raw_place()
         self.assertEqual(parse_place(value)["duration_minutes"], 120)

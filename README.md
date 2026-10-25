@@ -124,6 +124,8 @@ The Vite development server prints the local frontend URL when it starts.
 | --- | --- | --- |
 | `ANTHROPIC_API_KEY` | For fallback | Editorial suggestions; optional when Google is configured. |
 | `ANTHROPIC_MODEL` | No | Claude model; defaults to `claude-sonnet-4-6`. |
+| `ENABLE_AI_SUGGESTIONS` | No | Set `false` for Google-only discovery with no Anthropic requests. Defaults to `true`. |
+| `ALLOWED_ORIGINS` | No | Comma-separated frontend origins allowed by CORS; defaults to local Vite origins. |
 | `GOOGLE_MAPS_API_KEY` | No | Private server key for Places API (New) and Routes API. Enables Google discovery. |
 | `GOOGLE_ROUTES_MAX_ELEMENTS` | No | Maximum billed matrix elements per operation; default `100`, `0` skips Routes. |
 | `SUPABASE_URL` | No | Supabase project URL used for persistence. |

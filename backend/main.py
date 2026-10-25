@@ -14,7 +14,7 @@ from models.schemas import ItineraryRequest, ItineraryResponse, PlanningOptions,
 from services.claude_service import get_suggestions
 from services.geocoding_service import discover_fallback
 from services.optimizer_service import Planner, build_plan
-from services.places_service import PlacesClient, PlacesError
+from services.places_service import PlacesClient, PlacesError, PlacesQuotaError
 from services.storage_service import hydrate_plan, serialize_plan
 from services.travel_service import build_travel_times
 
@@ -28,7 +28,8 @@ if os.getenv("SUPABASE_URL", "").strip() and os.getenv("SUPABASE_KEY", "").strip
         logger.warning("Supabase could not be initialized; using memory storage.")
 
 app = FastAPI(title="OptiMapper API", description="Itinerarios turísticos con horarios y límites diarios", version="2.0.0")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
+allowed_origins = [value.strip() for value in os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if value.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
 itineraries_store: dict[str, dict] = {}
 
 
@@ -131,6 +132,8 @@ def _refresh_google(data):
 def _failure(exc):
     if isinstance(exc, HTTPException):
         raise exc
+    if isinstance(exc, PlacesQuotaError):
+        raise HTTPException(429, str(exc)) from exc
     if isinstance(exc, PlacesError):
         raise HTTPException(503, str(exc)) from exc
     if isinstance(exc, ValueError):
@@ -148,8 +151,13 @@ def root():
 def create_itinerary(request: ItineraryRequest):
     try:
         google = bool(os.getenv("GOOGLE_MAPS_API_KEY", "").strip())
+        ai_enabled = os.getenv("ENABLE_AI_SUGGESTIONS", "true").strip().lower() in {"1", "true", "yes"}
         warnings, suggestions = [], []
-        if os.getenv("ANTHROPIC_API_KEY", "").strip() or not google:
+        if not ai_enabled:
+            if not google:
+                raise ValueError("Las sugerencias de Claude están desactivadas. Configura Google Places para buscar lugares.")
+            warnings.append("Las sugerencias de Claude están desactivadas para evitar consumo de Anthropic; se usan duraciones orientativas por categoría.")
+        elif os.getenv("ANTHROPIC_API_KEY", "").strip() or not google:
             try:
                 suggestions = get_suggestions(request.city, request.days, request.interests)
             except Exception:

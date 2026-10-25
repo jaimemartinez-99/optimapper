@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 with patch.dict(os.environ, {"SUPABASE_URL": "", "SUPABASE_KEY": "", "GOOGLE_MAPS_API_KEY": "", "ANTHROPIC_API_KEY": ""}):
     import main
 
-from services.places_service import PlacesClient, PlacesError
+from services.places_service import PlacesClient, PlacesError, PlacesQuotaError
 from services.travel_service import TravelTimes
 
 
@@ -20,7 +20,7 @@ class ApiTests(unittest.TestCase):
     def setUp(self):
         main.itineraries_store.clear()
         self.client = TestClient(main.app)
-        self.env = patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "", "ANTHROPIC_API_KEY": "test"})
+        self.env = patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "", "ANTHROPIC_API_KEY": "test", "ENABLE_AI_SUGGESTIONS": "true"})
         self.env.start()
         self.addCleanup(self.env.stop)
         self.suggestions = patch.object(main, "get_suggestions", return_value=[])
@@ -81,6 +81,19 @@ class ApiTests(unittest.TestCase):
             result = self.client.post("/itinerary", json={"city": "Madrid", "days": 2})
         self.assertEqual(result.status_code, 503)
         self.discovery_mock.assert_not_called()
+
+    def test_disabled_ai_never_uses_anthropic_even_with_existing_key(self):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test", "ENABLE_AI_SUGGESTIONS": "false"}), patch.object(PlacesClient, "discover", return_value=(places(), None, [])), patch.object(main, "_travel", side_effect=lambda pois, options, origin, google, preferred_pairs=None: TravelTimes(pois)):
+            response = self.client.post("/itinerary", json={"city": "Madrid", "days": 2})
+        self.assertEqual(response.status_code, 200, response.text)
+        self.suggestion_mock.assert_not_called()
+        self.assertTrue(any("desactivadas" in warning for warning in response.json()["warnings"]))
+
+    def test_quota_limit_returns_429_with_actionable_message(self):
+        with patch.dict(os.environ, {"GOOGLE_MAPS_API_KEY": "test"}), patch.object(PlacesClient, "discover", side_effect=PlacesQuotaError("Cuota diaria agotada")):
+            response = self.client.post("/itinerary", json={"city": "Madrid", "days": 2})
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response.json()["detail"], "Cuota diaria agotada")
 
     def test_legacy_database_rows_remain_readable(self):
         from unittest.mock import MagicMock

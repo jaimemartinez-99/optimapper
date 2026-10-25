@@ -15,6 +15,10 @@ class PlacesError(RuntimeError):
     pass
 
 
+class PlacesQuotaError(PlacesError):
+    pass
+
+
 def normalized(value):
     return "".join(c for c in unicodedata.normalize("NFKD", value.casefold()) if not unicodedata.combining(c) and c.isalnum())
 
@@ -59,6 +63,8 @@ class PlacesClient:
                 headers={"X-Goog-Api-Key": self.api_key, "X-Goog-FieldMask": fields},
                 json=payload, timeout=20.0,
             )
+            if response.status_code == 429:
+                raise PlacesQuotaError("Se ha alcanzado el límite de consultas de Google Places. Prueba más tarde; el límite diario se restablece al día siguiente.")
             response.raise_for_status()
             return response.json()
         except (httpx.HTTPError, ValueError) as exc:

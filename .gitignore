@@ -30,6 +30,8 @@ coverage/
 # IDE and OS metadata
 .idea/
 .vscode/*
+.vercel/
+**/.vercel/
 !.vscode/extensions.json
 **/.vscode/*
 !**/.vscode/extensions.json
