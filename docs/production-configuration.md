@@ -91,6 +91,33 @@ La nueva interfaz debe publicarse antes de activar Places en el backend de
 producción: la interfaz anterior usa Leaflet y no debe representar datos de Google
 en el mapa de OpenStreetMap.
 
+## Validación del 25 de octubre de 2026
+
+- Backend candidato: `optimapper-api-00013-jaj`, commit
+  `c1d41c616cb46e1a5f1715db0df25ca1f042aca6`.
+- URL de prueba: `https://candidate---optimapper-api-x35lojuy3a-ew.a.run.app`.
+- La revisión `optimapper-api-00011-qfq` conserva el 100 % del tráfico de producción
+  mientras falta publicar la interfaz correspondiente en Vercel.
+- Pasan 31 pruebas de backend y 11 de frontend; la compilación de producción del
+  frontend y la construcción de la imagen de Python 3.11 completaron correctamente.
+- Prueba real: Madrid, 2 días desde el 2 de noviembre de 2026, 8 horas diarias,
+  desplazamientos a pie y Claude desactivado. Resultado: 4 y 5 visitas, con
+  472 y 430 minutos totales por día; los trayectos elegidos tienen datos de Routes.
+- Se comprobó el guardado en Supabase con esquema de itinerario versión 2 y sin
+  coordenadas originales de Google persistidas, y la preflight CORS del dominio de Vercel.
+- La validación con datos reales motivó excluir municipios vecinos que caían
+  dentro del círculo de búsqueda y evitar reservar un día a un único punto lejano
+  cuando hay zonas con varias visitas disponibles.
+- Vercel compiló la rama como Preview. La publicación en el dominio de producción
+  y las variables de Maps requieren autorizar la integración de Vercel.
+
+Una vez publicado ese frontend y configurada su clave pública, se puede activar
+la revisión ya validada sin construir otra imagen:
+
+```powershell
+gcloud run services update-traffic optimapper-api --region=europe-west1 --project=optimapper-489016 --to-revisions=optimapper-api-00013-jaj=100
+```
+
 Referencias: [cuotas de Maps](https://developers.google.com/maps/reporting-and-monitoring/reporting),
 [spend caps de Cloud Run](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps),
 [precios de Artifact Registry](https://cloud.google.com/artifact-registry/pricing).
