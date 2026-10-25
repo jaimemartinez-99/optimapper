@@ -1,0 +1,23 @@
+# The Vercel project builds frontend/; exclude backend and local-only files.
+.git
+.idea
+.vscode
+.venv
+.venv-check
+.vercel
+backend
+database
+docs
+infra
+node_modules
+frontend/node_modules
+frontend/dist
+frontend/coverage
+frontend/.vercel
+.env*
+**/.env*
+**/*.local
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
