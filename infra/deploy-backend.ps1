@@ -16,7 +16,7 @@ if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Commit source changes before deploy
 $image = "$Region-docker.pkg.dev/$ProjectId/cloud-run-source-deploy/${Service}:$commit"
 
 # Explicit e2-medium build workers; avoid larger paid build machine types.
-& $Gcloud builds submit (Join-Path $repoRoot 'backend') --project=$ProjectId --region=$Region --tag=$image --machine-type=e2-medium --timeout=600 --quiet
+& $Gcloud builds submit (Join-Path $repoRoot 'backend') --project=$ProjectId --region=$Region --tag=$image --machine-type=e2-medium --timeout=600 --suppress-logs --quiet
 if ($LASTEXITCODE -ne 0) { throw 'Container build failed. The current service was not changed.' }
 
 $deployArgs = @(

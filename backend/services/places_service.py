@@ -102,6 +102,14 @@ class PlacesClient:
             item = parse_place(raw)
             if not item or haversine(center, item["coords"]) > radius / 1000:
                 return False
+            # Nearby Search is circular. A city's viewport also excludes nearby
+            # municipalities that happen to fit inside its circumscribed circle.
+            if "low" in viewport and "high" in viewport:
+                low, high = viewport["low"], viewport["high"]
+                lat, lng = item["coords"]
+                longitude_inside = low["longitude"] <= lng <= high["longitude"] if low["longitude"] <= high["longitude"] else lng >= low["longitude"] or lng <= high["longitude"]
+                if not low["latitude"] <= lat <= high["latitude"] or not longitude_inside:
+                    return False
             previous = candidates.get(item["place_id"])
             if previous:
                 previous["must_visit"] = previous.get("must_visit", False) or required

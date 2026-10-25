@@ -74,6 +74,7 @@ class Planner:
         self.dates = [options.start_date + timedelta(days=i) if options.start_date else None for i in range(days)]
         self.windows = [[opening_intervals(poi, day) for poi in pois] for day in self.dates]
         self.duration = [math.ceil(poi.get("duration_minutes", 60) * {"relaxed": 1.25, "balanced": 1, "intensive": 0.85}[options.pace]) for poi in pois]
+        self.neighborhood_support = [sum(haversine(poi["coords"], other["coords"]) <= 2 for other in pois) for poi in pois]
 
     def evaluate(self, route, day):
         summary = {"date": self.dates[day], "visit_minutes": 0, "travel_minutes": 0, "waiting_minutes": 0,
@@ -156,7 +157,11 @@ class Planner:
                 continue
             def seed_score(index):
                 separation = min((haversine(self.pois[index]["coords"], self.pois[other]["coords"]) for other in seeds), default=0)
-                return (bool(self.pois[index].get("must_visit")), separation * math.sqrt(self.pois[index].get("priority", 50) / 100), self.pois[index].get("priority", 50))
+                # Prefer a neighborhood with several visits over a lone distant
+                # attraction; a large distance alone should not consume a day.
+                geographic_score = min(5, separation) * math.sqrt(self.neighborhood_support[index])
+                return (bool(self.pois[index].get("must_visit")), self.neighborhood_support[index] > 1,
+                        geographic_score * math.sqrt(self.pois[index].get("priority", 50) / 100), self.pois[index].get("priority", 50))
             index = max(feasible, key=seed_score)
             routes[day] = [index]
             summaries[day] = self.evaluate([index], day)[1]

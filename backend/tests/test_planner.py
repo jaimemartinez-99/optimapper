@@ -105,6 +105,15 @@ class PlannerTests(unittest.TestCase):
         for stops in plan["itinerary"].values():
             self.assertLess(max(p["coords"][1] for p in stops) - min(p["coords"][1] for p in stops), .01)
 
+    def test_isolated_outlier_does_not_take_a_day_from_dense_city_visits(self):
+        places = [poi(f"Central {i}", 75, lat=40.4 + (i % 4) * .004, lng=-3.7 + (i // 4) * .004, priority=90-i) for i in range(10)]
+        places.append(poi("Distant park", 75, lat=40.455, lng=-3.45, priority=85))
+        plan = build_plan(places, 2)
+        scheduled = [item for stops in plan["itinerary"].values() for item in stops]
+        self.assertNotIn("Distant park", [item["site"] for item in scheduled])
+        self.assertGreaterEqual(len(scheduled), 8)
+        self.assertTrue(all(len(stops) >= 3 for stops in plan["itinerary"].values()))
+
     def test_day_accounting_is_consistent(self):
         places = [poi(str(i), 90, lat=40.4 + i * .005) for i in range(20)]
         plan = build_plan(places, 3)

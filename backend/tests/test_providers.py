@@ -18,6 +18,15 @@ def raw_place(identifier="prado", name="Museo del Prado", lat=40.4):
 
 
 class PlacesTests(unittest.TestCase):
+    def test_city_viewport_excludes_a_neighboring_municipality_inside_radius(self):
+        center = raw_place("city", "Madrid")
+        center["viewport"] = {"low": {"latitude": 40.2, "longitude": -3.8}, "high": {"latitude": 40.6, "longitude": -3.6}}
+        neighbor = raw_place("neighbor", "Outside city", 40.4)
+        neighbor["location"]["longitude"] = -3.5
+        with patch.object(PlacesClient, "search", return_value=[center]), patch.object(PlacesClient, "_request", return_value={"places": [raw_place(), neighbor]}):
+            result, _, _ = PlacesClient().discover(ItineraryRequest(city="Madrid", days=2), [])
+        self.assertEqual([item["place_id"] for item in result], ["prado"])
+
     def test_provider_quota_error_is_preserved(self):
         response = httpx.Response(429, request=httpx.Request("POST", "https://places.googleapis.com"))
         with patch("services.places_service.httpx.request", return_value=response):
