@@ -59,9 +59,9 @@ GOOGLE_MAPS_API_KEY=tu_clave_privada_de_backend
 GOOGLE_ROUTES_MAX_ELEMENTS=20
 ```
 
-Con `20` se consultan como máximo 20 pares origen/destino por operación,
-recuperación o recálculo. Se priorizan los trayectos del plan preliminar y después
-algunas alternativas cercanas. Los trayectos sin datos reales se marcan como estimados.
+Con `20` se consultan como máximo 20 pares origen/destino por generación,
+recuperación o recálculo. Se consultan exclusivamente los tramos del plan
+preliminar. Los trayectos sin datos reales se marcan como estimados.
 Con `0` se omite Routes; puedes activar solo Places y Maps para empezar.
 
 En `frontend/.env`:
