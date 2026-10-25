@@ -3,9 +3,37 @@
 Proyecto: `optimapper-489016`. Backend: `optimapper-api`, región `europe-west1`.
 Frontend: `https://optimapper.vercel.app/`.
 
-El código se mantiene en `feat/time-aware-itineraries`. Cloud Run ejecuta una
-imagen construida desde esa rama; no lee automáticamente los archivos locales ni
-requiere fusionarlos con `main`. Vercel necesita su propio despliegue del frontend.
+El código se mantiene en `feat/time-aware-itineraries`, sin modificar `main`.
+Cloud Run ejecuta una imagen construida desde esa rama; no lee automáticamente
+los archivos locales. El frontend de esa rama también está publicado en Vercel.
+
+## Vercel
+
+- Cuenta/equipo: `kubla14s-projects`, plan Hobby.
+- Proyecto existente: `optimapper`, conectado a `jaimemartinez-99/optimapper` en GitHub.
+- Directorio raíz: `frontend`; framework Vite; Node.js 24.x.
+- Despliegue publicado: `dpl_BZ5NzQiUnpwwpxKovtvqVY2Txo46`, construido por la CLI
+  desde el checkout limpio del commit `46f3a0f7c161f1308cfc477a6b4f1a842f67550e`.
+- Primero se construyó en entorno Production con `--skip-domain`; se validaron
+  las rutas y el JavaScript servido y después se promovió ese mismo despliegue.
+- Variables configuradas en Production, Preview y Development:
+  `VITE_API_URL=https://optimapper-api-x35lojuy3a-ew.a.run.app` y
+  `VITE_GOOGLE_MAPS_API_KEY`, con la clave pública restringida del navegador.
+  No se copian las claves privadas de backend a Vercel.
+- `frontend/vercel.json` permite abrir directamente `/plan` y `/map/:id`,
+  enviando las rutas de Vue al `index.html`. Los archivos estáticos siguen
+  sirviéndose como tales.
+- `.vercelignore` excluye backend, entornos virtuales, archivos `.env`, claves,
+  dependencias locales y artefactos de compilación del envío de la CLI.
+
+La integración de Git conserva `main` como rama de producción; los pushes a
+`feat/time-aware-itineraries` generan Preview. La versión actual se publicó
+explícitamente desde la rama de mejoras. Antes de volver a publicar desde `main`,
+hay que incorporar estos cambios para conservar la nueva interfaz.
+
+Las restricciones de la clave y CORS permiten el dominio de producción. Un
+Preview tiene otro dominio: para probar allí la conexión completa habría que
+autorizar su origen concreto en ambos sitios; crear un Preview no lo autoriza.
 
 ## Controles de consumo
 
@@ -96,8 +124,9 @@ en el mapa de OpenStreetMap.
 - Backend candidato: `optimapper-api-00013-jaj`, commit
   `c1d41c616cb46e1a5f1715db0df25ca1f042aca6`.
 - URL de prueba: `https://candidate---optimapper-api-x35lojuy3a-ew.a.run.app`.
-- La revisión `optimapper-api-00011-qfq` conserva el 100 % del tráfico de producción
-  mientras falta publicar la interfaz correspondiente en Vercel.
+- La revisión `optimapper-api-00013-jaj` recibe el 100 % del tráfico de producción,
+  después de publicar la interfaz correspondiente en Vercel. La revisión anterior
+  `optimapper-api-00011-qfq` se conserva para permitir volver atrás.
 - Pasan 31 pruebas de backend y 11 de frontend; la compilación de producción del
   frontend y la construcción de la imagen de Python 3.11 completaron correctamente.
 - Prueba real: Madrid, 2 días desde el 2 de noviembre de 2026, 8 horas diarias,
@@ -108,11 +137,19 @@ en el mapa de OpenStreetMap.
 - La validación con datos reales motivó excluir municipios vecinos que caían
   dentro del círculo de búsqueda y evitar reservar un día a un único punto lejano
   cuando hay zonas con varias visitas disponibles.
-- Vercel compiló la rama como Preview. La publicación en el dominio de producción
-  y las variables de Maps requieren autorizar la integración de Vercel.
+- El dominio de producción sirve el despliegue verificado de Vercel; `/`, `/plan`
+  y `/map/:id` devuelven la aplicación con HTTP 200. El bundle publicado contiene
+  la URL estable de la API y la clave pública esperada de Maps.
+- Tras activar Cloud Run, se recuperó el itinerario guardado desde la URL estable:
+  HTTP 200, datos de Places y Routes, dos jornadas de 472 y 430 minutos, y CORS
+  aceptado para `https://optimapper.vercel.app`. La portada recibe sus tres
+  sugerencias guardadas y la preflight para crear itinerarios devuelve HTTP 200.
+- La comprobación del despliegue se hizo por HTTP y mediante pruebas de componentes;
+  falta una comprobación visual del mapa en un navegador autenticado.
+- Las pruebas reales consumen las mismas cuotas diarias conservadoras que el
+  uso normal de la aplicación.
 
-Una vez publicado ese frontend y configurada su clave pública, se puede activar
-la revisión ya validada sin construir otra imagen:
+Para repetir la promoción de esta revisión sin construir otra imagen:
 
 ```powershell
 gcloud run services update-traffic optimapper-api --region=europe-west1 --project=optimapper-489016 --to-revisions=optimapper-api-00013-jaj=100

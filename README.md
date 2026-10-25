@@ -203,7 +203,7 @@ docker build -t optimapper-api ./backend
 docker run --env-file backend/.env -p 8080:8080 -e PORT=8080 optimapper-api
 ```
 
-Set `VITE_API_URL` to the deployed API URL before building the frontend. Review the backend's permissive CORS configuration before exposing a production deployment.
+Set `VITE_API_URL` to the deployed API URL and configure the restricted browser Maps key before building the frontend. Set `ALLOWED_ORIGINS` on the backend to the frontend's exact origin. See [production configuration](docs/production-configuration.md) for the active Vercel and Cloud Run setup.
 
 ## Security notes
 
