@@ -3,11 +3,23 @@ import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { City, Country } from 'country-state-city'
+import { apiError, handOffItinerary } from '../services/itinerarySession'
 
 const router = useRouter()
 const form = ref(false)
 const city = ref('')
 const days = ref(3)
+const startDate = ref('')
+const pace = ref('balanced')
+const dailyHours = ref(8)
+const dailyStart = ref('09:00')
+const travelMode = ref('WALK')
+const accommodation = ref('')
+const mustVisit = ref('')
+const interests = ref([])
+const paceOptions = [{ title: 'Tranquilo', value: 'relaxed' }, { title: 'Equilibrado', value: 'balanced' }, { title: 'Intensivo', value: 'intensive' }]
+const transportOptions = [{ title: 'A pie', value: 'WALK' }, { title: 'Coche', value: 'DRIVE' }]
+const interestOptions = [{ title: 'Cultura', value: 'culture' }, { title: 'Historia', value: 'history' }, { title: 'Naturaleza', value: 'nature' }, { title: 'Arte', value: 'art' }]
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -78,18 +90,27 @@ const submit = async () => {
 
     const response = await axios.post(`${import.meta.env.VITE_API_URL}/itinerary`, {
       city: payloadCity,
-      days: days.value
+      days: days.value,
+      start_date: startDate.value || null,
+      pace: pace.value,
+      daily_hours: dailyHours.value,
+      daily_start: dailyStart.value,
+      travel_mode: travelMode.value,
+      accommodation: accommodation.value.trim() || null,
+      must_visit: mustVisit.value.split('\n').map(name => name.trim()).filter(Boolean),
+      interests: interests.value,
     })
 
     // Redirigir al mapa con el UUID generado
     if (response.data && response.data.id) {
+      handOffItinerary(response.data)
       router.push(`/map/${response.data.id}`)
     } else {
       throw new Error('El destino no pudo ser cartografiado.')
     }
   } catch (err) {
     console.error(err)
-    errorMsg.value = err.response?.data?.detail || err.message || 'La ruta naval está bloqueada en este momento.'
+    errorMsg.value = apiError(err, 'No se pudo generar el itinerario. Inténtalo de nuevo.')
   } finally {
     loading.value = false
   }
@@ -97,11 +118,11 @@ const submit = async () => {
 </script>
 
 <template>
-  <v-container fluid class="fill-height pa-0 m-0 vintage-bg position-relative overflow-hidden">
+  <v-container fluid class="plan-page-root pa-0 m-0 vintage-bg position-relative">
     <!-- Paper Texture -->
     <div class="paper-texture"></div>
 
-    <v-row no-gutters class="fill-height w-100 justify-center align-center position-relative" style="z-index: 2;">
+    <v-row no-gutters class="plan-form-row w-100 justify-center align-center position-relative" style="z-index: 2;">
       <v-col cols="12" sm="10" md="8" lg="6" xl="5" class="pa-4 pa-sm-8">
         
         <v-card width="100%" elevation="0" class="brass-card pa-6 pa-sm-8 vintage-shadow fade-in-up">
@@ -189,6 +210,30 @@ const submit = async () => {
               ></v-slider>
             </div>
 
+            <v-row>
+              <v-col cols="12" sm="6">
+                <v-text-field v-model="startDate" label="Fecha de inicio (opcional)" type="date" variant="outlined" hide-details="auto" />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-select v-model="pace" label="Ritmo del viaje" :items="paceOptions" variant="outlined" hide-details="auto" />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-text-field v-model="dailyStart" label="Inicio de cada jornada" type="time" variant="outlined" hide-details="auto" />
+              </v-col>
+              <v-col cols="12" sm="6">
+                <v-select v-model="travelMode" label="Desplazamientos" :items="transportOptions" variant="outlined" hide-details="auto" />
+              </v-col>
+              <v-col cols="12">
+                <label class="text-body-2" id="daily-hours-label">Tiempo disponible al día: {{ dailyHours }} h</label>
+                <v-slider v-model="dailyHours" :min="3" :max="12" :step="1" aria-labelledby="daily-hours-label" color="var(--color-accent-leather)" hide-details />
+                <p class="text-caption mb-3">Incluye visitas, traslados, 45 min de descanso y 30 min de margen. Las horas se expresan en la hora local del destino.</p>
+                <v-select v-model="interests" label="Intereses (opcional)" :items="interestOptions" multiple chips variant="outlined" />
+                <v-text-field v-model="accommodation" label="Alojamiento: nombre o dirección (opcional)" hint="Se incluirán la salida y el regreso de cada día." persistent-hint variant="outlined" class="mb-4" />
+                <v-textarea v-model="mustVisit" label="Tus imprescindibles (uno por línea, máximo 10)" :rows="3" variant="outlined" hint="Se priorizarán; te avisaremos si no caben." persistent-hint :rules="[value => value.split('\n').filter(name => name.trim()).length <= 10 || 'Máximo 10 imprescindibles.']" />
+                <p v-if="!startDate" class="text-caption mt-3">Añade una fecha para poder comprobar los días de apertura.</p>
+              </v-col>
+            </v-row>
+
             <v-alert
               v-if="errorMsg"
               type="error"
@@ -221,6 +266,11 @@ const submit = async () => {
 </template>
 
 <style scoped>
+.plan-page-root, .plan-form-row {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 .vintage-bg {
   background-color: var(--color-bg-paper);
 }

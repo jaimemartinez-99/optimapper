@@ -12,6 +12,7 @@
 
 # Python
 .venv/
+.venv-check/
 **/.venv/
 __pycache__/
 **/__pycache__/

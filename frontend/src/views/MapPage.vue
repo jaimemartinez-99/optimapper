@@ -1,134 +1,92 @@
 <script setup>
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
-import L from 'leaflet'
+import TravelMap from '../components/TravelMap.vue'
+import { apiError, safeExternalUrl, takeItinerary } from '../services/itinerarySession'
 
 const route = useRoute()
 const router = useRouter()
-
 const loading = ref(true)
 const errorMsg = ref('')
+const editError = ref('')
+const recalculating = ref(false)
 const itineraryData = ref(null)
-const selectedDay = ref(0) // Índice del tab (0, 1, 2...)
-const mobileView = ref('diary') // 'diary' o 'map'
-
-const mapContainer = ref(null)
-let mapInstance = null
-let mapMarkers = []
-let mapPolyline = null
-
-// Arrays de colores de tierras para distinguir los días
+const selectedDay = ref(0)
+const mobileView = ref('diary')
+const excluded = ref([])
+const required = ref([])
+const assignments = ref({})
 const ROUTE_COLORS = ['#8B5A2B', '#4A5D43', '#C05727', '#2C3E50', '#8c2425', '#5c4033']
+const dayKey = computed(() => `day_${selectedDay.value + 1}`)
+const summary = computed(() => itineraryData.value?.day_summaries?.[dayKey.value])
+const dayOptions = computed(() => [
+  { title: 'Elegir automáticamente', value: 0 },
+  ...Array.from({ length: itineraryData.value?.days || 0 }, (_, i) => ({ title: `Día ${i + 1}`, value: i + 1 })),
+])
+const allPlaces = computed(() => [...Object.values(itineraryData.value?.itinerary || {}).flat(), ...(itineraryData.value?.unscheduled || [])])
+const hasChanges = computed(() => {
+  const saved = itineraryData.value?.day_assignments || {}
+  const changedDay = Object.keys({ ...saved, ...assignments.value }).some(id => saved[id] !== assignments.value[id])
+  return excluded.value.length || changedDay || allPlaces.value.some(poi => required.value.includes(poiId(poi)) !== Boolean(poi.must_visit))
+})
+const attributionLinks = computed(() => {
+  const links = new Map()
+  allPlaces.value.forEach(poi => (poi.attributions || []).forEach(item => links.set(item.provider, item.providerUri)))
+  return [...links].map(([name, url]) => ({ name, url: safeExternalUrl(url) }))
+})
 
+function poiId(poi) {
+  return poi.place_id || `osm:${poi.site.toLowerCase()}:${poi.coords[0].toFixed(5)},${poi.coords[1].toFixed(5)}`
+}
+function resetChoices() {
+  excluded.value = []
+  assignments.value = { ...(itineraryData.value?.day_assignments || {}) }
+  required.value = allPlaces.value.filter(poi => poi.must_visit).map(poiId)
+}
+function assignDay(poi, value) {
+  if (value) assignments.value[poiId(poi)] = value
+  else delete assignments.value[poiId(poi)]
+}
+function toggleExcluded(poi) {
+  const id = poiId(poi)
+  if (excluded.value.includes(id)) excluded.value = excluded.value.filter(value => value !== id)
+  else {
+    excluded.value.push(id)
+    required.value = required.value.filter(value => value !== id)
+    delete assignments.value[id]
+  }
+}
 const fetchItinerary = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/itinerary/${route.params.id}`)
-    itineraryData.value = response.data
-    
-    loading.value = false // Liberar el DOM render
-    
-    // Iniciar mapa cuando tenemos datos (en el nextTick para asegurar el ref del contenedor)
-    await nextTick()
-    setTimeout(() => {
-      initMap()
-      drawDayLayer(0)
-    }, 100)
-    
-  } catch (err) {
-    console.error(err)
-    errorMsg.value = err.response?.data?.detail || 'No se pudo cargar el itinerario.'
+    const pending = takeItinerary(route.params.id)
+    itineraryData.value = pending || (await axios.get(`${import.meta.env.VITE_API_URL}/itinerary/${route.params.id}`)).data
+    resetChoices()
+  } catch (error) {
+    errorMsg.value = apiError(error, 'No se pudo cargar el itinerario.')
+  } finally {
     loading.value = false
   }
 }
-
-const initMap = () => {
-  if (!mapContainer.value) return
-
-  // Icono por defecto (fix bug de Leaflet con Webpack/Vite)
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
-    iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
-    shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
-  });
-
-  mapInstance = L.map(mapContainer.value).setView([0, 0], 2)
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19
-  }).addTo(mapInstance)
-}
-
-const drawDayLayer = (dayIndex) => {
-  if (!mapInstance || !itineraryData.value) return
-
-  // Limpiar capas anteriores
-  mapMarkers.forEach(m => mapInstance.removeLayer(m))
-  mapMarkers = []
-  if (mapPolyline) mapInstance.removeLayer(mapPolyline)
-
-  const dayKey = `day_${dayIndex + 1}`
-  const pois = itineraryData.value.itinerary[dayKey]
-
-  if (!pois || pois.length === 0) return
-
-  const color = ROUTE_COLORS[dayIndex % ROUTE_COLORS.length]
-  const latlngs = []
-
-  // Crear markers
-  pois.forEach((poi, index) => {
-    // Las coordenadas de Claude / Nominatim suelen venir en [lat, lon]
-    const latlng = [poi.coords[0], poi.coords[1]]
-    latlngs.push(latlng)
-
-    const marker = L.marker(latlng).addTo(mapInstance)
-        // Popup bonito
-      marker.bindPopup(`<b>${index + 1}. ${poi.site}</b>`)
-      mapMarkers.push(marker)
-  })
-
-  // Crear Polyline conectando los puntos
-  if (latlngs.length > 1) {
-    mapPolyline = L.polyline(latlngs, {
-      color: color,
-      weight: 4,
-      opacity: 0.8,
-      dashArray: '10, 10'
-    }).addTo(mapInstance)
-  }
-
-  // Ajustar vista para englobar todos los puntos
-  const group = new L.featureGroup(mapMarkers)
-  mapInstance.fitBounds(group.getBounds(), { padding: [50, 50] })
-
-  // Forzar redibujado para evitar errores de renderizado de Leaflet en contenedores dinámicos
-  setTimeout(() => {
-    mapInstance.invalidateSize()
-  }, 250)
-}
-
-// Cuando cambia el tab, redibujamos
-watch(selectedDay, (newVal) => {
-  if (!loading.value) {
-    drawDayLayer(newVal)
-  }
-})
-
-watch(mobileView, (newView) => {
-  if (newView === 'map' && mapInstance) {
-    nextTick(() => {
-      setTimeout(() => {
-        mapInstance.invalidateSize()
-      }, 300)
+const replan = async () => {
+  recalculating.value = true
+  editError.value = ''
+  try {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/itinerary/${itineraryData.value.id}/replan`, {
+      excluded_ids: excluded.value,
+      must_visit_ids: required.value,
+      day_assignments: assignments.value,
     })
+    itineraryData.value = response.data
+    resetChoices()
+    await router.replace(`/map/${response.data.id}`)
+  } catch (error) {
+    editError.value = apiError(error, 'No se pudo recalcular el itinerario.')
+  } finally {
+    recalculating.value = false
   }
-})
-
-onMounted(() => {
-  fetchItinerary()
-})
+}
+onMounted(fetchItinerary)
 </script>
 
 <template>
@@ -168,7 +126,7 @@ onMounted(() => {
             <div>
               <div class="text-caption text-moss tracking-widest font-weight-bold mb-1 text-uppercase">DIARIO DE EXPEDICIÓN</div>
               <h2 class="text-display text-h4 font-weight-bold text-ink text-uppercase cartography-title">{{ itineraryData.city.split(',')[0] }}</h2>
-              <span class="text-body-2 text-ink-light tracking-wide font-italic">Haz el recorrido en el orden que te apetezca</span>
+              <span class="text-body-2 text-ink-light font-italic">Visitas y horarios orientativos en la hora local del destino</span>
             </div>
             <v-btn icon="mdi-book-arrow-left-outline" variant="text" color="var(--color-accent-leather)" @click="router.push('/')" title="Cerrar Diario"></v-btn>
           </div>
@@ -178,10 +136,32 @@ onMounted(() => {
               D.{{ n }}
             </v-tab>
           </v-tabs>
+          <div v-if="summary" class="mt-3 text-body-2 text-ink" aria-live="polite">
+            <strong v-if="summary.date">{{ summary.date }} · </strong>
+            {{ Math.floor(summary.total_minutes / 60) }} h {{ summary.total_minutes % 60 }} min de {{ summary.available_minutes / 60 }} h disponibles
+            <div class="text-caption mt-1">
+              {{ summary.visit_minutes }} min de visitas · {{ summary.travel_minutes }} min de traslados{{ summary.travel_estimated ? ' (con estimaciones)' : '' }}
+            </div>
+            <div v-if="summary.total_minutes" class="text-caption">
+              Descanso: {{ summary.break_minutes }} min<span v-if="summary.break_start && summary.break_minutes"> desde {{ summary.break_start }}</span> · Margen: {{ summary.buffer_minutes }} min
+              <span v-if="summary.waiting_minutes"> · Esperas: {{ summary.waiting_minutes }} min</span>
+              <span v-if="summary.finish_time"> · Fin previsto: {{ summary.finish_time }}</span>
+            </div>
+            <div v-if="itineraryData.origin && summary.total_minutes" class="text-caption">Salida y regreso: {{ itineraryData.origin.site }} · Regreso: {{ summary.return_minutes }} min</div>
+          </div>
         </div>
 
         <!-- Lista de lugares -->
         <v-list class="flex-grow-1 overflow-y-auto pa-4 bg-transparent position-relative">
+          <details v-if="itineraryData.warnings?.length" class="mb-4 pa-3 border-dashed text-body-2">
+            <summary class="cursor-pointer">Notas del plan ({{ itineraryData.warnings.length }})</summary>
+            <ul class="mt-2 pl-5"><li v-for="warning in itineraryData.warnings" :key="warning" class="mb-2">{{ warning }}</li></ul>
+          </details>
+          <p v-if="itineraryData.places_source === 'google'" class="text-caption mb-3">Datos de lugares: Google Maps. La popularidad y las reseñas no representan un recuento de visitantes.</p>
+          <p v-if="attributionLinks.length" class="text-caption mb-3">
+            Fuentes: <span v-for="item in attributionLinks" :key="item.name"><a v-if="item.url" :href="item.url" target="_blank" rel="noopener noreferrer">{{ item.name }}</a><span v-else>{{ item.name }}</span> </span>
+          </p>
+          <p class="text-caption mb-4">Las duraciones de visita son estimaciones. Ajusta tus preferencias y pulsa Recalcular para comprobar los cambios.</p>
           <v-timeline density="compact" align="start" truncate-line="both" line-color="rgba(139, 90, 43, 0.4)">
             <v-timeline-item
               v-for="(poi, index) in itineraryData.itinerary['day_' + (selectedDay + 1)]"
@@ -197,11 +177,19 @@ onMounted(() => {
                   Nº {{ index + 1 }}
                 </div>
               </template>
-              <div class="mb-6 pb-2 border-b-dashed">
+              <div class="mb-6 pb-2 border-b-dashed" :class="{ 'excluded-place': excluded.includes(poiId(poi)) }">
                 <div class="text-display font-weight-bold text-h6 text-ink mb-1 cartography-title">{{ poi.site }}</div>
+                <div v-if="poi.arrival_time" class="text-body-2 font-weight-bold">{{ poi.arrival_time }}–{{ poi.departure_time }} · {{ poi.visit_minutes || poi.duration_minutes }} min</div>
+                <div v-if="poi.travel_minutes" class="text-caption">Traslado previo: {{ poi.travel_minutes }} min{{ poi.travel_estimated ? ' (estimado)' : '' }}</div>
+                <div v-if="poi.waiting_minutes" class="text-caption">Espera hasta la apertura: {{ poi.waiting_minutes }} min</div>
+                <div v-if="poi.rating" class="text-caption">★ {{ poi.rating }} · {{ poi.review_count?.toLocaleString('es-ES') }} reseñas</div>
                 <div class="text-caption text-ink-light font-italic tracking-wide">
-                  Coord: {{ poi.coords[0].toFixed(4) }}°N, {{ poi.coords[1].toFixed(4) }}°E
+                  {{ poi.coords[0].toFixed(4) }}, {{ poi.coords[1].toFixed(4) }}
                 </div>
+                <a v-if="safeExternalUrl(poi.google_maps_uri)" :href="safeExternalUrl(poi.google_maps_uri)" target="_blank" rel="noopener noreferrer" class="text-caption">Ver en Google Maps</a>
+                <v-checkbox v-model="required" :value="poiId(poi)" label="Imprescindible" density="compact" hide-details :disabled="excluded.includes(poiId(poi)) || recalculating" />
+                <v-select :model-value="assignments[poiId(poi)] || 0" @update:model-value="assignDay(poi, $event)" :items="dayOptions" label="Fijar a un día" density="compact" variant="outlined" hide-details :disabled="excluded.includes(poiId(poi)) || recalculating" class="my-2" />
+                <v-btn size="small" variant="text" :disabled="recalculating" @click="toggleExcluded(poi)">{{ excluded.includes(poiId(poi)) ? 'Conservar visita' : 'Quitar del plan' }}</v-btn>
               </div>
             </v-timeline-item>
           </v-timeline>
@@ -209,7 +197,21 @@ onMounted(() => {
           <div v-if="!itineraryData.itinerary['day_' + (selectedDay + 1)]?.length" class="text-center pa-8 text-ink-light tracking-widest text-caption border-dashed mt-4 font-italic">
             [ Páginas en blanco en esta jornada ]
           </div>
+          <details v-if="itineraryData.unscheduled?.length" class="pa-3 mt-3 border-dashed">
+            <summary>Alternativas que no han cabido ({{ itineraryData.unscheduled.length }})</summary>
+            <div v-for="poi in itineraryData.unscheduled" :key="poiId(poi)" class="mt-4 pb-3 border-b-dashed text-body-2">
+              <strong>{{ poi.site }}</strong> · {{ poi.duration_minutes }} min estimados
+              <p class="text-caption">{{ poi.reason }}</p>
+              <v-checkbox v-model="required" :value="poiId(poi)" label="Priorizar al recalcular" density="compact" hide-details :disabled="recalculating" />
+              <v-select :model-value="assignments[poiId(poi)] || 0" @update:model-value="assignDay(poi, $event)" :items="dayOptions" label="Fijar a un día" density="compact" variant="outlined" hide-details class="mt-2" :disabled="recalculating" />
+            </div>
+          </details>
+          <v-alert v-if="editError" type="error" variant="tonal" class="mt-3">{{ editError }}</v-alert>
         </v-list>
+        <div class="pa-4 border-b-vintage">
+          <p v-if="hasChanges" class="text-caption mb-2" role="status">Tienes cambios pendientes de recalcular.</p>
+          <v-btn block color="var(--color-accent-leather)" :loading="recalculating" @click="replan">Recalcular itinerario</v-btn>
+        </div>
       </v-col>
 
       <v-col 
@@ -217,9 +219,7 @@ onMounted(() => {
         class="flex-column position-relative pa-0 map-col order-1 order-md-2"
         :class="mobileView === 'map' ? 'd-flex h-100 flex-grow-1' : 'd-none d-md-flex h-100 flex-grow-1'"
       >
-        <div ref="mapContainer" class="w-100 flex-grow-1 map-container vintage-map-filter"></div>
-        <!-- Torn Edges Effect overlay -->
-        <div class="map-overlay-edges"></div>
+        <TravelMap :data="itineraryData" :day="selectedDay" />
       </v-col>
     </v-row>
 
@@ -248,6 +248,9 @@ onMounted(() => {
   display: flex !important;
   flex-direction: column;
 }
+
+.sidebar-col { min-height: 0; }
+.excluded-place { opacity: 0.5; }
 
 .vintage-bg {
   background-color: var(--color-bg-paper) !important;
