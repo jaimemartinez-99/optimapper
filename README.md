@@ -2,6 +2,8 @@
 
 OptiMapper builds feasible day-by-day travel plans from verified places, visit durations, opening hours and travel times. Google Places discovers attractions and resolves Claude's editorial suggestions. A time-budgeted planner assigns and orders visits, reserving breaks, a safety margin and hotel transfers when supplied. Without Google credentials, Claude + Nominatim remains available with explicit travel estimates.
 
+Deployed in: https://optimapper.vercel.app/
+
 ## Features
 
 - Trips from 1 to 14 days, with optional start date, interests, pace and accommodation
